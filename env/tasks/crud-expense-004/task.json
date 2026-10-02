@@ -1,0 +1,19 @@
+{
+  "id": "crud-expense-004",
+  "pattern": "crud-cli",
+  "seed": 42004,
+  "entity": "expense",
+  "fields": [
+    "amount:float",
+    "kind:str",
+    "category:str"
+  ],
+  "commands": [
+    "add",
+    "list",
+    "stats"
+  ],
+  "aggregate": "monthly_total",
+  "held_out": false,
+  "task_prompt": "根据 .arch/BLUEPRINT.md 的契约，实现 记账条目管理 CLI：在项目根创建 src/ 代码与 src/main.py 入口，使命令 python src/main.py add/list/stats 全部可用，并通过 validate_blueprint.py 的全部检查。"
+}

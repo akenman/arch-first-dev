@@ -1,390 +1,284 @@
 ---
 name: arch-first-dev
-description: 架构优先的AI编程方法。先构建完整产品架构蓝图，再进行模块化实现，通过级联契约记忆系统(Cascading Contract Memory)确保全局逻辑无断裂、无幻觉。使用场景：(1) 任何中等以上复杂度的编程任务，尤其是多模块项目修复或重构时。(2) 当用户说"先设计再写代码"、"架构不合理"、"代码太零散"、"逻辑有漏洞"或类似表述。(3) 当用户没有明确要求但任务复杂度明显需要全局设计时主动提议使用。(4) 改造/扩展现有项目时，先逆向重建架构契约再修改。
+description: 架构优先的AI编程方法。先构建完整产品架构蓝图，再进行模块化实现，通过级联契约记忆系统(Cascading Contract Memory)确保全局逻辑无断裂、无幻觉。使用场景：(1) 预计跨越多个模块的编程任务（新项目、跨模块新功能、多模块修复或重构）。(2) 当用户说"先设计再写代码"、"架构不合理"、"代码太零散"、"逻辑有漏洞"或类似表述。(3) 当用户没有明确要求但任务复杂度明显需要全局设计时主动提议使用。(4) 改造/扩展现有项目时，先逆向重建架构契约再修改。(5) 祖传/屎山代码（无文档、腐化、不敢动）——先用屎山模式考古建账（影响面+腐点台账），再经安全网、防腐层与绞杀迁移逐步重构，不做局部盲改。
 metadata:
   short-description: 先蓝图后代码，全局逻辑零断裂
 ---
 
 # 架构优先开发
 
+## 快速适用性判断（最先读这节；不适用就到此为止）
+
+触发后先回答 3 个问题，任何一个为"是"才继续使用本 skill，否则直接完成任务、
+不要画蓝图、不要读 references（eval 实测：简单任务通读全文的开销是直接完成的 ~5.4×）：
+
+```
+1. 任务会触碰 ≥ 2 个模块，或要新建多模块项目吗？
+2. 用户关心跨模块一致性 / 接口约定 / 架构梳理吗（或说了"先设计再写代码"）？
+3. 这不是纯原型速通（"先跑通就行，不用管质量"）吗？
+```
+
+不适用示例：单文件脚本、改配置、修单点 bug、加注释、格式化、数据小加工、快速原型。
+适用但想控制成本：修复/重构用 G2（局部逆向），接口设计 / Review 用 G1。
+
 ## 核心：蓝图填充模型
 
-先画完整蓝图（BLUEPRINT.md），再从底层向上逐格填充。蓝图是三个角色的合一：全局导航、空位标记、进度追踪。一个文件代替所有散落的设计文档。
-
-### 快速体验（首次使用，3 分钟）
-
-```
-1. 想一个小需求（如"命令行待办事项"、"简单的记账工具"）
-2. 说: "用 arch-first-dev L1 设计接口"
-   → AI 输出每个接口的 pre/post/error/side-effect 行为声明
-3. 说: "继续，L3 完整流程"
-   → AI 画蓝图 → 逐模块填充 → 运行验证 → 生成 SUMMARY.md
-4. 看一眼 .arch/SUMMARY.md，30 行看懂整个项目架构
-
-全程 3-5 分钟，产出可运行的完整项目。
-```
+先画完整蓝图（BLUEPRINT.md），再从底层向上逐格填充。蓝图是三个角色的合一：全局导航、空位标记、进度追踪。快速上手见 README.md；速查见 references/quick-reference.md。
 
 ## 分层加载
 
-本 skill 按触发条件分三层，避免无关内容占用上下文。
+### L1 核心（本文件，~300 行）
+快速适用性判断 / 路由 / 7 约束 / 3 层幻觉防护 / 启动指令 / 三档模式 / Phase 1-3 / 迭代模式。
+（v3.0 减法：细则是 references 的事，本文件只留主流程。）
 
-### L1 核心（始终加载，当前 ~300 行）
-以下章节每次触发直接可用，无需额外加载：
-- 核心概念 / 快速体验 / 启动指令
-- 7 条约束 / 3 层幻觉防护 / 上下文压力感知
-- Phase 1/2/3 完整工作流 + 蓝图修正协议
-- 增量开发 / 迭代模式 / 逆向蓝图
-
-### L2 条件加载（满足条件时自动展开）
+### L2 条件加载
 
 | 触发条件 | 加载内容 |
 |---------|---------|
-| 非 DeepSeek TUI 或工具调用失败 | [平台适配](references/platform-adaptation.md) — 5 平台工具映射表 + 回退策略 |
-| 模型不在 8 已知列表中 | [模型适配](references/model-adaptation.md) — 8 模型查表 + 4 问题自分类 |
-| 会话首次触发 skill | [能力探针](references/model-adaptation.md) — 4 项自测验证适配参数 |
+| 平台工具与映射表不符，或工具调用失败 | [平台适配](references/platform-adaptation.md) |
+| 需要模型适配参数 / 本地小模型档 | [模型适配](references/model-adaptation.md) |
+| 需求模糊 / 目录结构 / 产出物清单 | [项目搭建](references/project-setup.md) |
 
-### L3 按需引用（显式需要时展开）
+### L3 按需加载路由器
 
-| 触发条件 | 加载章节（均在 [高级特性](references/advanced-features.md)） |
-|---------|-------------------------------------------------------|
-| 实现完接口需要对照验证 | Behavior-Code 逐行对照 |
-| 模块标记 [done] 后 | Auto-Checkpoint 写入规则 |
-| 选择设计方案时 | Design Decision Log 格式 |
-| 同层 ≥ 2 模块 [empty] | 并行填充策略 |
-| 多人协作场景 | 多会话协作协议（LOCKS.md + 合并） |
-| 用户问"什么时候退出 skill" | 退出条件 |
-| 修改蓝图需要区分变更类型 | @CHANGE vs @DECISION 边界 |
-| 下游模块因上游变更无法对接 | Rollback 协议 |
-| 模块 [done] 后需要测试 | 测试策略 + 验收清单 |
+> 本表只回答一个问题：当前阶段出现什么条件时，Read 哪个 reference。
+> 条件未命中就不读——这是上下文节省的全部来源。
 
+```
+Phase 1（画蓝图）:
+  用户说"用模式设计" → references/patterns.md
+  腐化/超大存量项目 → references/legacy-mode.md（屎山模式）
+  Phase 1 完成后 → references/verification.md §健康度自诊（可选）
+Phase 2（逐格填充）:
+  上下文纪律 / 压力信号 / 逐行对照 / 模块 [done] 后动作
+    → references/context-discipline.md
+  下游无法对接 → references/verification.md §契约修复优先序（Rollback 已移 attic）
+Phase 3（连通验证）:
+  完成后 → references/verification.md §验收清单 / §漂移检测 / §失败恢复
+迭代模式:
+  读取蓝图时 → references/verification.md §漂移检测
+  影响面/腐点 → references/legacy-mode.md
+跨 Phase:
+  契约测试进阶 → references/verification.md；蓝图修正协议 / 逆向 8 步 / git 协作 /
+  @EXTERNAL 完整格式 → references/blueprint-ops.md
+  需求澄清 / 产出物清单 → references/project-setup.md
+  快速查阅 → references/quick-reference.md；特性冲突 → references/priority-table.md
+  未验证特性（多会话/Rollback/大型分解/专长分工）→ references/attic.md（主路径不引用）
+```
+
+### L0 本地小模型模式（7B-14B 量化模型，有效上下文 ≤32K）
+
+本地小模型不要读本文件其余部分——流程知识已全部搬进脚本：
+
+```
+python scripts/work.py next  <BLUEPRINT.md>   # 输出下一个最小工作包（含所需全部上下文+内联规则）
+python scripts/work.py check <BLUEPRINT.md>   # 全链验证并输出下一步
+python scripts/scaffold.py  <BLUEPRINT.md> --out src   # 骨架生成（签名锁定）
+```
+
+模型只做三件事：读工作包 → 填 TODO 函数体 → 运行 check 并遵循其输出。
+行为守则（11 条）：references/edge-guide.md。强模型不适用本模式（工作包会人为限制视野）。
+
+读取纪律：条件未命中就不读；同一轮最多读 1 个 reference；用户显式点名的特性优先；
+已读过的文件本会话内不重读；不要在回复中复述蓝图/契约原文——工具输出即记录；
+文件读入后没有"释放"——腾上下文用 /compact 或 CHECKPOINT + 新会话。
 
 ## 约束系统（7 条硬规则，不可绕过）
 
-| # | 约束 | 一句话 | 违反后果 |
-|---|------|--------|---------|
-| 1 | 用户确认门 | 蓝图未确认不进 Phase 2 | 架构偏离用户预期 |
-| 2 | 一次一格 | 同时只能有一个 [in progress] | 上下文分裂，接口不一致 |
-| 3 | 依赖先填 | 上层模块等下层 [done] 后才能开始 | 写了但依赖还空着 |
-| 4 | 变更有痕 | 改蓝图必须有 @CHANGE | 隐式修改导致接口不匹配 |
-| 5 | 模块边界 | 不直接访问其他模块的内部文件 | 模块紧耦合 |
-| 6 | 接口有消费者 | 每个接口必须在 @FLOW 中出现 | 定义了不用的接口 |
-| 7 | 一次读取 | 依赖模块的源码只读一次 | 上下文被实现细节占满 |
+| # | 约束 | 一句话 |
+|---|------|--------|
+| 1 | 用户确认门 | 蓝图未确认不进 Phase 2（微项目档例外：展示要点后知会即续） |
+| 2 | 一次一格 | 同时只能一个 [in progress]（例外：同层可并行；微项目/简化档同层 ≤3 可批量填充） |
+| 3 | 依赖先填 | 上层模块等下层 [done] 后才能开始 |
+| 4 | 变更有痕 | 改蓝图必须有 @CHANGE |
+| 5 | 模块边界 | 不直接访问其他模块的内部文件 |
+| 6 | 接口有消费者 | 每个接口必须在 @FLOW 中出现 |
+| 7 | 一次读取 | 依赖模块只读接口签名，不读实现源码 |
 
-违规处理：停止 → 回退 → 纠正 → 记录 @CHANGE → 恢复。同一约束连续违规 3 次则暂停向用户报告。
+违规处理：停止 → 回退 → 纠正 → 记录 @CHANGE → 恢复。
+约束 3/5/6 的结构部分由 scripts/validate_blueprint.py 确定性检查；1/2/4/7 是行为纪律。
 
 ## 逻辑幻觉防护（3 层）
 
-AI 代码的常见幻觉：不报错但数据不对。
+**第 1 层 — BEHAVIOR 声明**：每个接口四段 `pre / post / error / side-effect`。
+简化格式：纯函数只写 post；UI 组件写 post + side-effect；配置声明只写 post。
+两条精确化要求（eval 实测缺陷）：写文件的接口必须声明父目录不存在时的行为；
+数值格式化必须指明舍入模式（"四舍五入"不可测——Python round 是银行家舍入）。
 
-**第 1 层 — BEHAVIOR 声明**：每个接口定义扩展为四段：
+**第 2 层 — 边界矩阵**：每模块检查 6 维度——空输入 / 不存在引用 / 边界值 /
+重复操作 / 类型越界 / 依赖故障，每项 ✓ 或 —，不允许空 ❌。
 
-```
-接口名(params) → return
-  pre:  调用前必须为真的条件
-  post: 返回后保证为真的条件
-  error: 什么输入抛什么错
-  side-effect: 改变了什么状态
-```
-
-**第 2 层 — 边界矩阵**：每个模块对 6 个维度逐一检查：
-
-```
-空输入 | 不存在引用 | 边界值 | 重复操作 | 类型越界 | 依赖故障
-```
-
-每项 ✓（已覆盖）或 —（不适用），不允许空的 ❌。
-
-**第 3 层 — 错误链映射**：跨模块错误的传播路径显式列出：
-
-```
-@ERROR_CHAIN
-  源头: A.getX() → null
-  传播: B.doSomething() → 检查返回值，抛异常
-  终点: B 内部闭合
-```
+**第 3 层 — 错误链映射**：跨模块错误传播路径显式列出（源头 → 传播 → 终点）；
+异步流支持补偿事件分支。
 
 三个防护任一不完整 → 不进入 Phase 3。
 
+## 能力补偿（为弱模型设计）
 
-## 上下文压力感知（基于可观察信号）
-
-阈值按模型自适应（查 [模型适配](references/model-adaptation.md) 表）。AI 无法直接读取"上下文使用率百分比"，改用 4 个可观察信号来判断压力：
-
-| 信号 | 触发条件 | 判断 |
-|------|---------|------|
-| 旧内容回流 | 工具输出中重复出现前 3 轮已处理过的文件内容（同一文件的相同段落再次出现） | 🟠 |
-| 推理步数增加 | 完成一个填充循环的工具调用数 > 8 次（基准 4-6 次） | 🟡 |
-| 频繁读蓝图 | 同一次填充中读 BLUEPRINT.md 超过 2 次 | 🔴 |
-| 错误模式重复 | 连续出现同类接口不匹配 | 🟠 |
-
-判断逻辑：
-
+1. **判断变程序**：能脚本化的检查不交给模型——--gate / --verify / --check-signatures 是权威
+2. **自由度变模板**：Phase 2 前先 scaffold 生成骨架（签名锁定 + 契约原文进 docstring），只填 TODO
+3. **验证变事实**：每条 @FLOW 写 @VERIFY 命令，Phase 3 ⑦ 用 --verify 执行
+弱模型默认档：全量对照 + 微批量 + 每阶段过门禁 + 骨架先行 + 蓝图过 --lint 消歧
+（强模型能脑补的惯例——排序方向、大小写、边界含否、求和互斥——小模型会各自发明实现）；
+降档须用户明示"模型很强"。
 
 ## 启动指令
-
-收到 "用 arch-first-dev" 或触发场景时：
 
 ```
 第 0 步：判断
   ├── 新项目 → Phase 1
   ├── 现有项目 → 逆向蓝图 → Phase 2
+  ├── 祖传/腐化项目（屎山）→ references/legacy-mode.md 五步协议
   └── 简单任务（3 文件以内、单模块）→ 不要触发本 skill
 
-第 0.3 步：选择采用粒度（渐进式）
-  不一定要走完整三阶段。根据需求选择：
-  
-  L1 行为契约 ──── 适合：设计接口、Review 代码、写 API 文档
-    产出: 每个接口的 pre/post/error/side-effect 四段声明
-    不画 BLUEPRINT.md，不执行 Phase 2/3
-    触发: "用 arch-first-dev 设计接口" / "检查这些接口的契约"
-  
-  L2 约束驱动 ──── 适合：重构现有代码、修复接口不一致
-    产出: L1 + 7 条约束检查 + BEHAVIOR 对照（关键接口）
-    可选: 最小蓝图（仅 @MODULE + @FLOW，不含 @DATA/@BUILD_ORDER）
-    触发: "用 arch-first-dev 约束检查" / "这个模块的接口有没有问题"
-  
-  L3 完整流程 ──── 适合：新项目、大型重构
-    产出: 完整 BLUEPRINT.md + Phase 1→2→3
-    触发: "用 arch-first-dev" / "先设计再写代码"
-  
-  未指定粒度时，根据任务复杂度自动选择：
-    单模块/接口设计 → L1
-    2-3 模块重构 → L2
-    ≥ 4 模块新项目 → L3
-  
-第 0.5 步：目录结构
-  每个模块一个目录，入口文件只导出蓝图上定义的接口
-  
-第 0.6 步：选择模式（规模感知）
-  ├── 接口总数 ≤ 10 → 简化模式：跳过边界矩阵，@ERROR_CHAIN 仅保留 1-2 条最关键路径，
-  │                   @DECISION 仅记录非显而易见的选择；Phase 3 只验证 ①⑤⑥
-  └── 接口总数 > 10 → 完整模式：边界矩阵 + 全量 @ERROR_CHAIN + @DECISION 全量
-```
+第 0.1 步：需求模糊时先问 3-5 个关键问题（清单见 references/project-setup.md）；
+          需求清晰（有明确功能清单/输入输出）就跳过提问，不要为了问而问
+第 0.2 步：粒度——G1 行为契约（设计接口/Review）| G2 约束驱动（重构/修不一致，
+          可局部逆向）| G3 完整流程（新项目/大重构）。
+          按当下可判断的任务形态选，拿不准 → G3；G3 画完发现只有 1-2 个模块
+          可与用户确认后收缩为 G2。过渡只补缺失部分，不重做已有产出。
+          预估接口数 ≤ 8 → 直接按微项目档画蓝图（段落可省，见 0.5），不画完再降档
+第 0.3/0.4 步：目录结构与产出物清单 → references/project-setup.md
+第 0.5 步：规模模式（Phase 1 完成后由 validate_blueprint.py 按接口数自动判定）：
+    ≤ 8  接口 → 微项目档：确认门降级为知会门（展示要点后直接进 Phase 2）；
+              同层全部批量填充；测试仅跨模块接口；CHECKPOINT 仅 Phase 切换；
+              蓝图未改不重跑 validator；@CROSSCUT 一行版、@ERROR_CHAIN 无复杂
+              跨模块传播时可省（validator 只强制 @MODULE/@FLOW/@BUILD_ORDER）
+    9-15 接口 → 简化模式：边界矩阵可省、@ERROR_CHAIN 1-2 条、每接口 happy-path、
+              Phase 3 验证 ①⑤⑥⑦+⑨（⑧ 照常）；确认门阻塞
+    > 15 接口 → 完整模式：全量仪式，Phase 3 验证 ①-⑨
+    轮次预算（advisory，超 1.5× 时先省仪式——合并对照/省回顾；门禁与 --verify 永不省）：
+    微项目 ~12 轮 | 简化 ~20 轮
 
+第 0.6 步：工程化检查点（validate_blueprint.py = 机械检查器，三个介入点）
+    a. Phase 1 预检后：脚本执行预检 ②③⑥⑦，模型只做 ①④⑤ 语义合理性
+    b. Phase 3 前：全量复检 + --signatures 生成漂移基准
+    c. CI / 迭代：蓝图修改后运行，退出码非 0 即失败
+  命令（.arch/BLUEPRINT.md 按实际路径替换）：
+    python scripts/validate_blueprint.py <BP>                    # 检查
+    python scripts/validate_blueprint.py <BP> --gate phase2      # 阶段门禁（phase1/2/3）
+    python scripts/validate_blueprint.py <BP> --verify           # 执行 @VERIFY 机器验证
+    python scripts/validate_blueprint.py <BP> --signatures       # 生成签名快照（含契约文件 sha256）
+    python scripts/validate_blueprint.py <BP> --check-signatures # CI 门禁：蓝图漂移则退出码 1
+    python scripts/validate_blueprint.py <BP> --check-code       # CI 门禁：代码手改未同步蓝图则退出码 1
+    python scripts/validate_blueprint.py <BP> --lint             # 歧义 lint：标记弱模型无法猜惯例的措辞
+    python scripts/scaffold.py <BP> --out src                    # 骨架生成（签名锁定）
+    python scripts/work.py next|check <BP>                       # 本地小模型编排器（L0）
+    python scripts/archaeology.py <项目根> [--impact <符号>]     # 考古：依赖图/fan-in/循环；--impact 出影响面四问①②③
+  CI 模板：templates/ci-blueprint.yml。
+  自治模式（无交互用户）：确认门不阻塞——展示蓝图要点、默认选择记 @CHANGE 后继续。
+  用户说"速通/自治/别等我"时同样适用（门禁与 --verify 照跑，只免阻塞等待）。
+```
 
 ## Phase 1：画蓝图
 
-七步分解框架：
+七步分解：
 
 ```
 ① 实体抽取 → @DATA
 ② 行为识别 → @FLOW
 ③ 模块划分 → @MODULE
-④ 依赖标注 → 写清"依赖 B → getX()"（含调用路径，如 `from tasks import getX`），不只写"依赖 B"
-⑤ 构建排序 → @BUILD_ORDER（规则：每个模块的层号 = max(所有直接依赖的层号) + 1；
-   无依赖的模块为第 1 层。例如 A 依赖 B 依赖 C → C=1, B=2, A=3）
+④ 依赖标注 → 写清"依赖 B → getX()"（含调用路径），不只写"依赖 B"
+⑤ 构建排序 → @BUILD_ORDER（层号 = max(直接依赖层号)+1；无依赖为第 1 层）
 ⑥ 覆盖率检查 → 每个功能点→@FLOW→@MODULE 接口的链完整
 ⑦ 用户确认 → 展示蓝图，等待确认
 ```
 
-Phase 1→2 预检（逐项执行）：
-  ① @MODULE：每个模块有名称、职责、接口、依赖、状态 → 全部 ✓ 才通过
-  ② 构建顺序：按层号递增排列，每层内的模块不互相依赖 → 验证无逆依赖
-  ③ 依赖完整性：每个 @MODULE 的「依赖」字段指向的模块名都在 @MODULE 列表中存在
-  ④ @FLOW：每条 @FLOW 中的模块名都能在 @MODULE 中找到对应的接口
-  ⑤ @DATA：@FLOW 中引用的每个数据实体都在 @DATA 中有定义
-  ⑥ 无循环依赖：从任意模块沿依赖链遍历不会回到自身（用 DFS 验证）
-  ⑦ 无同名冲突：接口名在全蓝图范围内唯一
+> ⚡ 一次成稿：需求清晰时 ①-⑥ 单轮直接产出完整蓝图全文，随后一并展示确认/知会；
+> 不要分步提问、逐段征求确认。只有需求模糊才回第 0.1 步。
+
+Phase 1→2 预检（②③⑥⑦ 交给 validate_blueprint.py，模型做 ①④⑤ 并复核脚本输出）：
+① @MODULE 字段齐全 ② 无逆依赖 ③ 无幽灵依赖 ④ @FLOW 模块/接口可解析
+⑤ @FLOW 引用的实体在 @DATA 中 ⑥ 无循环依赖 ⑦ 接口名全局唯一。
+失败恢复：脚本报什么修什么；⑥ 循环依赖 → 合并模块或抽公共模块。
 
 **BLUEPRINT.md 结构**：
 
 ```
+@META（version、scope: partial?；主版本=修正协议触发，次版本=模块/签名/FLOW 变更）
 @PROGRESS（进度条）
-@MODULE（模块地图：职责、接口、依赖、状态 [empty|done]）
-@FLOW（数据流：步骤和涉及模块）
-@DATA（数据结构：字段名和类型）
-@BUILD_ORDER（构建顺序）
-@CROSSCUT（跨切面：错误处理、日志、配置、平台适配、输出编码等）
-@EXTERNAL（外部依赖：数据库、第三方 API、消息队列、文件系统等的接口契约）
-@ERROR_CHAIN（错误链映射）
+@MODULE（职责、接口、依赖、状态 [empty|in progress|done|deferred|wontfix|removed]）
+@FLOW（同步格式: 步骤: 用户 → a.f() → b.g() → 终端 + 涉及: 模块列表；
+      异步格式加 事件: 与 补偿: 行）
+@DATA（字段名和类型；字段变更必须在 @CHANGE 关联 migration）
+@BUILD_ORDER（按层）
+@CROSSCUT（错误处理、日志、配置等跨切面）
+@EXTERNAL（外部依赖契约。支持「契约文件: openapi.yaml / *.proto / schema.sql」引用——
+  蓝图只存引用+行为摘要，冲突以引用文件为准；validator 校验存在性、sha256 入快照。
+  规则：声明可用模块（默认全部可用不安全）；故障模式必写；
+  有状态依赖（数据库/API/队列）必填四槽位：幂等性/重试/超时/事务边界）
+@ERROR_CHAIN（源头 → 传播 → 终点）
+@VERIFY（每条 @FLOW 的机器验证: run + expect-exit/expect-contains/expect-not-contains）
+@DEBT（腐点台账，格式见 references/legacy-mode.md）
 @CHANGE（变更日志）
 ```
 
-@EXTERNAL 格式示例：
-```
-@EXTERNAL PostgreSQL
-  类型: 关系数据库
-  连接: DATABASE_URL 环境变量
-  契约: 
-    - 所有持久化操作通过此数据库，不使用 ORM（直接 SQL）
-    - 表结构与 @DATA 一一对应
-    - 连接池: min=2, max=10
-  故障模式: 连接失败 → 重试 3 次 → 抛 DatabaseError
-
-@EXTERNAL Stripe API
-  类型: 第三方支付
-  认证: STRIPE_SECRET_KEY
-  契约:
-    - createPayment(amount, currency) → PaymentIntent
-    - 仅 payments 模块可以调用
-  故障模式: API 超时 → 重试 1 次 → 返回 pending 状态
-```
-
-@EXTERNAL 规则：
-  - 每个外部依赖一个条目
-  - 必须声明"哪个模块可以使用"（默认所有模块可用 → 不安全）
-  - 故障模式必须写（外部依赖是最不可控的故障源）
-
-
 ## Phase 2：逐格填充
 
-对每个 [empty] 模块执行：
+> ⚡ 批量填充：微项目/简化档且同层 [empty] ≤ 3 → 连续填充后统一对照与标记。
+
+对每个 [empty] 模块：
 
 ```
 1. 定位 → 确认依赖全 [done]
-2. 加载 → 当前模块接口 + 依赖模块接口签名 + @CROSSCUT
-   （不读依赖源码。不读无关 @FLOW）
-3. 实现 → 按蓝图签名写，落实 pre/post/error/side-effect 四项。
-   代码 docstring 引用蓝图而非重复录入：`@see BLUEPRINT.md @MODULE <name> → <func>`
-   （蓝图是行为声明的唯一真相源，避免两处不同步）
-
-3.5 验证策略（按接口总数自适应）：
-   ≤ 15 接口 → 全量对照（每个接口逐行检查 4 段声明）
-   16-50 接口 → 混合对照（跨模块接口全量，模块内部接口每模块抽 2 个）
-   > 50 接口 → 风险导向（只对照这三类：入口接口、被 ≥ 2 个模块依赖的接口、
-              操作 @EXTERNAL 的接口；其余信任实现）
-
-4. 标记 → [empty] → [done]，补全接口签名。
-   同层所有模块 [done] 后，可一次批量更新蓝图（同一编辑覆盖整层 PROGRESS），
-   减少 O(n) 单模块更新的上下文消耗。
-5. 确认 → 更新后的蓝图是否破坏依赖
-6. 释放 → 根据「上下文压力感知」信号判断，🟠 或 🔴 时释放已实现代码（只留接口签名）
+2. 加载 → 当前模块条目 + 依赖模块接口签名 + @CROSSCUT（不读依赖源码）
+3. 实现 → 按蓝图签名写，落实四段声明；docstring 引用蓝图而非重复录入
+3.5 对照 → 微项目档：跨模块全量+内部抽查；简化档全量；完整档风险导向
+   （详见 references/context-discipline.md §逐行对照）
+4. 标记 → [done]；同层全 done 后批量更新 @PROGRESS
+5. 确认 → 蓝图未破坏依赖
+6. 收尾 → 压力信号按 references/context-discipline.md §上下文压力感知 的判断逻辑行动
 ```
 
-填充异常 5 种：
-
-| 异常 | 处理 |
-|------|------|
-| 模块太大需拆分 | 拆为两个，重新排序，记录 @CHANGE |
-| 发现缺少接口 | 加接口；该模块重置为 [in progress]；所有直接依赖该接口的下游模块也重置为 [in progress]（级联回退） |
-| 发现多余接口 | 检查 @FLOW，确认删除，记录 @CHANGE |
-| 依赖不存在 | 移除依赖，可能删除零引用模块 |
-| 接口不匹配 | 确认谁错了，改对应模块 |
-| 蓝图设计问题 | 暂停 Phase 2，进入蓝图修正协议（见下文），回到 Phase 1 重新划分 |
-
+填充异常 6 种：模块太大 → 拆分重排记 @CHANGE；缺接口 → 加接口并级联回退下游；
+多接口 → 查 @FLOW 后删；依赖不存在 → 移除；接口不匹配 → 确认谁错改谁；
+蓝图设计问题 → 蓝图修正协议（references/blueprint-ops.md，回 Phase 1）。
 
 ## Phase 3：连通验证
 
 ```
-① 流验证：每条 @FLOW 的模块和接口都存在且状态 [done]
-② 依赖检查：接口签名匹配（A 输出的 shape = B 输入的 shape）+ 调用路径与蓝图标注一致
+① 流验证：每条 @FLOW 的模块和接口存在且 [done]
+② 依赖检查：签名匹配 + 调用路径一致（机械部分脚本覆盖）
 ③ 边界检查：边界矩阵全 ✓ 或 —
-④ 错误链检查：每条错误链源头→传播→终点完整
+④ 错误链检查：源头→传播→终点完整
 ⑤ 空位检查：无 [empty] 残留
-⑥ 变更回溯：逐条 @CHANGE 确认已整合
-  
-  简化模式下仅验证 ①⑤⑥：
-    ① 流验证 + ⑤ 空位检查 + ⑥ 变更回溯
-    （跳过 ②③④，因为简化模式无边界矩阵和全量错误链）
-
-⑦ 运行时验证（不可跳过）：
-  对每条 @FLOW，至少执行一次对应的命令或调用，确认：
-    - 无 ImportError / ModuleNotFoundError / 路径错误
-    - 无未捕获的运行时异常（允许预期的 ValueError 等业务异常）
-  工具：使用运行命令工具实际执行项目（如 python main.py）。
-
-  验证分级（按输出类型）：
-    结构化（API 返回值、JSON、退出码）：
-      → 验证字段名、类型与 @DATA 一致，exit code = 0
-    半结构化（表格、列表、统计面板）：
-      → 验证行/列数、关键数值在合理范围，不含 "Error" 子串
-    非结构化（格式化文本、ANSI 颜色、日志）：
-      → 验证输出非空、不含 traceback、不含 "Traceback" 关键字
-  
-  通过标准：所有 @FLOW 产生输出，且按对应分级无异常。
-
-⑧ 生成架构摘要（人类可读）：
-  验证通过后，自动从 BLUEPRINT.md 提取关键信息，输出到 .arch/SUMMARY.md：
-    - 一句话概述（"N 模块 / M 接口 / K 条数据流的 <项目类型>"）
-    - 模块依赖图（Mermaid 或 ASCII 树）
-    - 3-5 条最重要的 @FLOW（按涉及模块数排序，取最复杂的）
-    - 所有 @DECISION 的标题和一句话理由
-    - 所有 @EXTERNAL 的名称和故障模式
-  目标：新加入的开发者读 SUMMARY.md（~30 行）即可理解全局架构。
+⑥ 变更回溯：逐条 @CHANGE 已整合
+⑦ 运行时验证（不可跳过；项目质量门优先）：
+   先跑项目自己的 pytest/jest/tsc/lint——红了修本次改动范围的问题，
+   既有失败如实记 @CHANGE，不静默跳过；项目门验证"单元"，@FLOW 验证"流"。
+   再对每条 @FLOW 主路径执行一次：无 ImportError、无未捕获异常。
+   有 @VERIFY → 直接 python scripts/validate_blueprint.py <BP> --verify。
+   UI 项目：dev server 编译无报错 + 页面可渲染 + 关键交互一条；
+   无浏览器工具降级为 HTTP 200 + 关键路由非 5xx。
+   屎山项目无质量门 → 特征测试（legacy-mode.md 第 2 步）就是第一道门。
+⑧ 生成 .arch/SUMMARY.md：一句话概述 + 依赖图 + Top @FLOW + @DECISION + @EXTERNAL 故障模式
+⑨ 回顾：@CHANGE 分布 / 修正次数 / 关键发现 / 改进建议（3-5 句，追加到 SUMMARY）
 ```
 
-
-### 蓝图修正协议
-
-当 Phase 2 发现蓝图设计本身有问题（非单个接口缺失）时触发。
-
-触发条件（满足任一）：
-  - 同一模块连续 3 个接口的依赖在实际实现中走不通
-  - @BUILD_ORDER 排序后，某模块的传递依赖比预期深 ≥ 2 层
-  - 用户反馈"模块划分不合理"、"依赖方向反了"
-  - 发现 @EXTERNAL 的实际访问权限与契约声明的"可用模块"不一致
-
-修正步骤：
-  1. 暂停 Phase 2，记录当前进度到 CHECKPOINT.md（状态: [restructuring]）
-  2. 在 BLUEPRINT.md 中记录 @RESTRUCTURE 条目：
-     @RESTRUCTURE_001
-       触发: budgets 模块发现 transactions 的数据结构与 @DATA 不一致
-       分析: Phase 1 时 transactions 被过度简化
-       操作: 回到 Phase 1 重新提取 transactions 的完整数据结构
-  3. 重新执行 Phase 1 ④-⑦（从模块划分到用户确认）
-  4. 级联调整：更新 @MODULE、@BUILD_ORDER、@FLOW 中受影响的所有条目
-  5. 重置状态：所有受影响模块 → [empty]，依赖它们的下游模块 → [empty]
-  6. 用户确认新蓝图 → 恢复 Phase 2，从最底层 [empty] 开始
-
-与普通异常的区别：
-  - 单接口缺失 → "发现缺少接口"（微调，不重画蓝图）
-  - 单模块太大 → "模块太大需拆分"（局部拆分）
-  - 蓝图问题 → 蓝图修正协议（回到 Phase 1，级联影响多模块）
-
+完整档 ①-⑨；简化档 ①⑤⑥⑦+⑨（⑧ 照常）；微项目档 ①⑤⑥⑦ + ⑧ 一句话版，⑨ 可省。
+失败恢复细则见 references/verification.md；原则：①②⑤ 必须修复重验，其余定点重验。
 
 ## 增量开发 / 迭代模式
 
-已有项目需要加功能或修 bug 时：
-
 ```
-1. 读取 BLUEPRINT.md（已有蓝图的直接复用）
-2. 标记受影响模块为 [in progress]
-3. 新增模块标记为 [empty]
-4. 更新 @BUILD_ORDER 和 @FLOW
-5. 对修改和新增的模块执行 Phase 2 填充
-6. 执行 Phase 3 验证（只验证受影响的和相关的 @FLOW）
-```
-
-没有蓝图的现有项目，按以下步骤执行逆向蓝图：
-
-```
-第 1 步：列出项目文件
-    用列出目录内容工具递归列出所有源文件。
-    排除测试文件、配置文件、生成文件。
-
-第 2 步：逐个模块识别
-    按目录结构判断模块边界（通常一个子目录就是一个模块）。
-    如果一个目录下只有一个 index.ts/__init__.py，它的导出就是模块接口。
-    如果所有文件在一个 src/ 下没有子目录 → 按功能聚类：用 grep 找核心功能的关键字。
-
-第 3 步：提取接口签名
-    对每个模块，读入口文件（index.ts、__init__.py）的导出。
-    只收集函数签名和类型定义，不读内部实现。
-    产出：@MODULE 列表（接口名、参数、返回类型）。
-
-第 4 步：推断依赖
-    从 import/require/use 语句推断依赖。
-    只收集跨模块引用（不收集标准库和第三方包）。
-    产出：每个 @MODULE 的「依赖」字段。
-
-第 5 步：生成 @DATA
-    从类型定义、数据类、接口定义中提取数据结构。
-    如果一个类型在多个模块中出现 → 它是 @DATA（跨模块共享）。
-    如果一个类型只在单个模块内部使用 → 不是 @DATA，不写进蓝图。
-
-第 6 步：生成 @FLOW
-    从入口文件（路由、CLI 命令、事件处理器）出发，追踪调用链。
-    每一条从用户操作到数据返回的路径就是一条 @FLOW。
-    不需要精确到每一步，核心路径即可。
-
-第 7 步：标注 [done] 和 @UNCLEAR
-    提取出接口的模块 → 状态: [done]
-    推导出接口但不确定实现是否完整的模块 → 状态: [done] 标注 @UNCLEAR
-    完全看不出来的部分 → 状态: [empty]（需要补充实现）
-
-第 8 步：整理为 BLUEPRINT.md
-    与新建项目同样的蓝图格式。
-    全部模块初始状态为 [done] 或带 @UNCLEAR 标记的 [done]。
+1. 读蓝图 → 漂移检测（基准 SIGNATURES.json，--signatures 生成）
+   🟡/🔴 有漂移 → 先修复蓝图与代码差异
+1.5 影响面四问（跨模块改动前强制；完整版见 legacy-mode.md）：
+   ① 谁依赖我要改的符号（fan-in，scripts/archaeology.py --impact 验证）② 我依赖谁（fan-out）
+   ③ 波及面有无无测试区（有 → 先补特征测试）④ 本次偿还/新增 @DEBT 哪一笔
+   答不出 ① → 先考古（scripts/archaeology.py）。屎山项目必须走完整四问。
+2. 影响评估：单模块内部修改 → 直接改；接口签名/模块/FLOW 变更 → 蓝图级，继续
+3-5. 标记 [in progress] / [empty] → 更新 @BUILD_ORDER 和 @FLOW
+6. 对修改和新增模块执行 Phase 2 填充
+7. Phase 3 验证（范围：直接受影响 + 下游 @FLOW；无关 @FLOW 跳过）
 ```
 
-逆向蓝图完成后，修改需求进入迭代模式（见上文）。并非从 Phase 1 重新开始。
+契约修复三要件（跨模块数据/行为不一致时，详见 references/verification.md）：
+属主边界收口 + 消费方零改动或说明 + @DECISION 点名被否决方案——三者齐备才算对齐。
+
+局部逆向（G2/修 bug 控成本）：只对本次变更涉及的 @FLOW 上的模块逆向，
+@META 标 scope: partial；越界再扩展。git 协作约定见 references/blueprint-ops.md。
+
+没有蓝图的现有项目：逆向蓝图 8 步流程见 references/blueprint-ops.md，核心思路
+列出源文件 → 识别模块 → 提取签名 → 推断依赖 → @DATA → @FLOW → 标注状态 → 整理。
+完成后进入迭代模式，并非从 Phase 1 重新开始。

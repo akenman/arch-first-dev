@@ -1,0 +1,47 @@
+# 蓝图守卫 CI 模板（GitHub Actions）
+#
+# 用法：把本 skill 的 scripts/validate_blueprint.py 和 scripts/archaeology.py
+# 拷入你的仓库（建议 tools/ 下），
+# 本文件放 .github/workflows/blueprint.yml。提交 .arch/SIGNATURES.json 作为基线。
+#
+# 守卫逻辑：
+#   1) 结构门：蓝图拓扑/约束/状态一致性检查（退出码非 0 即失败）
+#   2) 签名门：--check-signatures 对比提交的 SIGNATURES.json 基线——
+#      代码接口变更（增/删/改）而蓝图未同步 → 拦下 PR
+#   3) 契约门：@EXTERNAL 引用的契约文件（openapi/proto/schema）内容变更 → 拦下 PR
+
+name: blueprint-guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  blueprint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 结构门
+        run: python tools/validate_blueprint.py .arch/BLUEPRINT.md
+
+      - name: 签名门 + 契约门
+        run: python tools/validate_blueprint.py .arch/BLUEPRINT.md --check-signatures
+
+      - name: 代码签名门（抓"手改代码未同步蓝图"）
+        run: python tools/validate_blueprint.py .arch/BLUEPRINT.md --check-code
+
+      # 可选：依赖环门（import 环即拦下；重构屎山时建议开启）
+      # - name: 依赖环门
+      #   run: python tools/archaeology.py . --check-cycles
+
+      # 可选：把本仓库自己的质量门也挂进来（与 Phase 3 ⑦ 的"项目质量门优先"对齐）
+      # - name: 项目质量门
+      #   run: |
+      #     pytest -q
+      #     ruff check .

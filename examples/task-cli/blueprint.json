@@ -1,0 +1,493 @@
+{
+  "schema": "arch-first-dev/blueprint@1",
+  "meta": {
+    "version": "1.0",
+    "source": "BLUEPRINT.md"
+  },
+  "progress": {
+    "storage": "done",
+    "tasks": "done",
+    "stats": "done",
+    "cli": "done"
+  },
+  "modules": [
+    {
+      "name": "storage",
+      "description": "JSON 文件的读写，任务数据的持久化层",
+      "status": "[done]",
+      "deps": [],
+      "interfaces": [
+        {
+          "name": "loadTasks",
+          "params": "",
+          "returns": "Task[]",
+          "behaviors": {
+            "pre": "无",
+            "post": "返回数组不为 null；文件不存在时返回空数组",
+            "error": "文件损坏（JSON 解析失败）时返回空数组（降级，不抛异常）",
+            "side-effect": "无"
+          }
+        },
+        {
+          "name": "saveTasks",
+          "params": "tasks: Task[]",
+          "returns": "void",
+          "behaviors": {
+            "pre": "tasks 不为 null",
+            "post": "数据写入磁盘；写入失败时静默（下次 loadTasks 读到旧数据或空）",
+            "error": "无（降级策略）",
+            "side-effect": "覆盖写入 tasks.json"
+          }
+        }
+      ]
+    },
+    {
+      "name": "tasks",
+      "description": "任务实体的增删改查和状态变更",
+      "status": "[done]",
+      "deps": [
+        "storage"
+      ],
+      "interfaces": [
+        {
+          "name": "addTask",
+          "params": "title, description, priority, dueDate, tags",
+          "returns": "Task",
+          "behaviors": {
+            "pre": "title 非空，priority ∈ {high, medium, low}（默认 medium）",
+            "post": "返回的 Task.id 自增唯一，status = todo，createdAt = 当前时间",
+            "error": "title 为空时抛 ValueError",
+            "side-effect": "存储中追加一条任务"
+          }
+        },
+        {
+          "name": "listTasks",
+          "params": "filter: TaskFilter | null",
+          "returns": "Task[]",
+          "behaviors": {
+            "pre": "filter 可空",
+            "post": "返回数组不为 null；可按 status/priority/tags/keyword/dueDate 筛选排序",
+            "error": "无",
+            "side-effect": "无"
+          }
+        },
+        {
+          "name": "getTask",
+          "params": "id",
+          "returns": "Task | null",
+          "behaviors": {
+            "pre": "id > 0",
+            "post": "返回匹配的任务或 null",
+            "error": "id ≤ 0 时抛 ValueError",
+            "side-effect": "无"
+          }
+        },
+        {
+          "name": "updateTask",
+          "params": "id, fields",
+          "returns": "Task | null",
+          "behaviors": {
+            "pre": "id > 0，fields 至少包含一个可更新字段（title/description/priority/dueDate/tags）",
+            "post": "返回更新后的 Task；id 不存在时返回 null",
+            "error": "id ≤ 0 或 fields 全空时抛 ValueError",
+            "side-effect": "存储中更新该任务（如存在）"
+          }
+        },
+        {
+          "name": "deleteTask",
+          "params": "id",
+          "returns": "void",
+          "behaviors": {
+            "pre": "id > 0",
+            "post": "若 id 存在则删除；不存在则静默（幂等）",
+            "error": "id ≤ 0 时抛 ValueError",
+            "side-effect": "存储中移除该任务（如存在）"
+          }
+        },
+        {
+          "name": "markDone",
+          "params": "id",
+          "returns": "Task | null",
+          "behaviors": {
+            "pre": "id > 0",
+            "post": "返回 status=done 且 completedAt=当前时间的 Task；id 不存在时返回 null",
+            "error": "id ≤ 0 时抛 ValueError",
+            "side-effect": "存储中更新状态和完成时间"
+          }
+        },
+        {
+          "name": "markInProgress",
+          "params": "id",
+          "returns": "Task | null",
+          "behaviors": {
+            "pre": "id > 0",
+            "post": "返回 status=in_progress 的 Task；id 不存在时返回 null",
+            "error": "id ≤ 0 时抛 ValueError",
+            "side-effect": "存储中更新状态"
+          }
+        }
+      ]
+    },
+    {
+      "name": "stats",
+      "description": "任务完成率统计和逾期检测",
+      "status": "[done]",
+      "deps": [
+        "tasks"
+      ],
+      "interfaces": [
+        {
+          "name": "getStats",
+          "params": "filter: TaskFilter | null",
+          "returns": "Stats",
+          "behaviors": {
+            "pre": "filter 可空",
+            "post": "total = todo + inProgress + done + overdue（overdue 为 dueDate < 今天且未完成的计数）",
+            "error": "无",
+            "side-effect": "无"
+          }
+        },
+        {
+          "name": "getOverdue",
+          "params": "",
+          "returns": "Task[]",
+          "behaviors": {
+            "pre": "无",
+            "post": "返回所有 dueDate < 今天且 status ≠ done 的 Task 数组",
+            "error": "无",
+            "side-effect": "无"
+          }
+        }
+      ]
+    },
+    {
+      "name": "cli",
+      "description": "命令行参数解析、命令路由和终端格式化输出",
+      "status": "[done]",
+      "deps": [
+        "stats",
+        "tasks"
+      ],
+      "interfaces": [
+        {
+          "name": "parseArgs",
+          "params": "argv: string[]",
+          "returns": "Command",
+          "behaviors": {
+            "pre": "argv 非空",
+            "post": "返回结构化的 Command 对象；无法识别时 action = \"help\"",
+            "error": "无（容错降级为 help）",
+            "side-effect": "无"
+          }
+        },
+        {
+          "name": "formatTask",
+          "params": "task: Task",
+          "returns": "string",
+          "behaviors": {
+            "pre": "task 不为 null",
+            "post": "返回单任务的彩色格式化字符串（含优先级图标、截止日期高亮）",
+            "error": "无",
+            "side-effect": "无"
+          }
+        },
+        {
+          "name": "formatTaskList",
+          "params": "tasks: Task[]",
+          "returns": "string",
+          "behaviors": {
+            "pre": "tasks 不为 null",
+            "post": "返回表格形式的任务列表（编号/状态/优先级/标题/截止日期）",
+            "error": "无",
+            "side-effect": "无"
+          }
+        },
+        {
+          "name": "formatStats",
+          "params": "stats: Stats",
+          "returns": "string",
+          "behaviors": {
+            "pre": "stats 不为 null",
+            "post": "返回统计面板字符串（总数/各状态数量/完成率进度条/逾期数）",
+            "error": "无",
+            "side-effect": "无"
+          }
+        }
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "name": "添加任务",
+      "involves": [
+        "cli",
+        "tasks",
+        "storage"
+      ],
+      "steps": [
+        "步骤: 用户 → cli.parseArgs() → tasks.addTask() → storage.saveTasks() → cli.formatTask() → 终端",
+        "涉及: cli, tasks, storage"
+      ]
+    },
+    {
+      "name": "列出任务",
+      "involves": [
+        "cli",
+        "tasks",
+        "storage"
+      ],
+      "steps": [
+        "步骤: 用户 → cli.parseArgs() → tasks.listTasks() → storage.loadTasks() → cli.formatTaskList() → 终端",
+        "涉及: cli, tasks, storage"
+      ]
+    },
+    {
+      "name": "查看单个任务",
+      "involves": [
+        "cli",
+        "tasks",
+        "storage"
+      ],
+      "steps": [
+        "步骤: 用户 → cli.parseArgs() → tasks.getTask(id) → storage.loadTasks() → cli.formatTask() → 终端",
+        "涉及: cli, tasks, storage"
+      ]
+    },
+    {
+      "name": "更新任务",
+      "involves": [
+        "cli",
+        "tasks",
+        "storage"
+      ],
+      "steps": [
+        "步骤: 用户 → cli.parseArgs() → tasks.updateTask(id, fields) → storage.loadTasks() → storage.saveTasks() → cli.formatTask() → 终端",
+        "涉及: cli, tasks, storage"
+      ]
+    },
+    {
+      "name": "删除任务",
+      "involves": [
+        "cli",
+        "tasks",
+        "storage"
+      ],
+      "steps": [
+        "步骤: 用户 → cli.parseArgs() → tasks.deleteTask(id) → storage.loadTasks() → storage.saveTasks() → 终端",
+        "涉及: cli, tasks, storage"
+      ]
+    },
+    {
+      "name": "完成任务",
+      "involves": [
+        "cli",
+        "tasks",
+        "storage"
+      ],
+      "steps": [
+        "步骤: 用户 → cli.parseArgs() → tasks.markDone(id) → storage.loadTasks() → storage.saveTasks() → cli.formatTask() → 终端",
+        "涉及: cli, tasks, storage"
+      ]
+    },
+    {
+      "name": "开始任务",
+      "involves": [
+        "cli",
+        "tasks",
+        "storage"
+      ],
+      "steps": [
+        "步骤: 用户 → cli.parseArgs() → tasks.markInProgress(id) → storage.loadTasks() → storage.saveTasks() → cli.formatTask() → 终端",
+        "涉及: cli, tasks, storage"
+      ]
+    },
+    {
+      "name": "查看统计",
+      "involves": [
+        "cli",
+        "stats",
+        "tasks",
+        "storage"
+      ],
+      "steps": [
+        "步骤: 用户 → cli.parseArgs() → stats.getStats(filter) → tasks.listTasks(filter) → storage.loadTasks() → cli.formatStats() → 终端",
+        "涉及: cli, stats, tasks, storage"
+      ]
+    },
+    {
+      "name": "查看逾期",
+      "involves": [
+        "cli",
+        "stats",
+        "tasks",
+        "storage"
+      ],
+      "steps": [
+        "步骤: 用户 → cli.parseArgs() → stats.getOverdue() → tasks.listTasks() → storage.loadTasks() → cli.formatTaskList() → 终端",
+        "涉及: cli, stats, tasks, storage"
+      ]
+    }
+  ],
+  "build_order": {
+    "storage": 1,
+    "tasks": 2,
+    "stats": 3,
+    "cli": 4
+  },
+  "externals": [],
+  "data": [
+    {
+      "name": "Task",
+      "fields": [
+        [
+          "id",
+          "int"
+        ],
+        [
+          "title",
+          "string"
+        ],
+        [
+          "description",
+          "string"
+        ],
+        [
+          "priority",
+          "enum[high|medium|low]"
+        ],
+        [
+          "status",
+          "enum[todo|in_progress|done]"
+        ],
+        [
+          "dueDate",
+          "date|null"
+        ],
+        [
+          "tags",
+          "string[]"
+        ],
+        [
+          "createdAt",
+          "datetime"
+        ],
+        [
+          "completedAt",
+          "datetime|null"
+        ]
+      ]
+    },
+    {
+      "name": "TaskFilter",
+      "fields": [
+        [
+          "status",
+          "enum|null"
+        ],
+        [
+          "priority",
+          "enum|null"
+        ],
+        [
+          "tags",
+          "string[]|null"
+        ],
+        [
+          "keyword",
+          "string|null"
+        ],
+        [
+          "dueBefore",
+          "date|null"
+        ],
+        [
+          "dueAfter",
+          "date|null"
+        ],
+        [
+          "sortBy",
+          "enum[priority|dueDate|createdAt]|null"
+        ],
+        [
+          "sortDesc",
+          "bool"
+        ]
+      ]
+    },
+    {
+      "name": "Stats",
+      "fields": [
+        [
+          "total",
+          "int"
+        ],
+        [
+          "todo",
+          "int"
+        ],
+        [
+          "inProgress",
+          "int"
+        ],
+        [
+          "done",
+          "int"
+        ],
+        [
+          "completionRate",
+          "float"
+        ],
+        [
+          "overdue",
+          "int"
+        ]
+      ]
+    },
+    {
+      "name": "Command",
+      "fields": [
+        [
+          "action",
+          "enum[add|list|get|update|delete|done|start|stats|overdue|help]"
+        ],
+        [
+          "params",
+          "dict"
+        ],
+        [
+          "flags",
+          "dict"
+        ]
+      ]
+    }
+  ],
+  "verify": [
+    {
+      "name": "添加任务",
+      "run": "python src/main.py add \"买牛奶\" --priority high",
+      "expect_exit": 0,
+      "contains": [],
+      "not_contains": [
+        "Traceback"
+      ]
+    },
+    {
+      "name": "列出任务",
+      "run": "python src/main.py list",
+      "expect_exit": 0,
+      "contains": [],
+      "not_contains": [
+        "Traceback"
+      ]
+    },
+    {
+      "name": "统计",
+      "run": "python src/main.py stats",
+      "expect_exit": 0,
+      "contains": [],
+      "not_contains": [
+        "Traceback"
+      ]
+    }
+  ]
+}

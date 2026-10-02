@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "tool": "scripts/validate_blueprint.py",
+    "blueprint": "BLUEPRINT.md",
+    "generated": "2026-09-16 13:13:38 UTC"
+  },
+  "_contracts": {},
+  "storage": {
+    "save_mapping": "save_mapping(short_code: str, long_url: str, ttl: int | null) -> bool",
+    "get_long_url": "get_long_url(short_code: str) -> str | null",
+    "delete_mapping": "delete_mapping(short_code: str) -> bool"
+  },
+  "encoder": {
+    "encode": "encode(long_url: str) -> str",
+    "is_valid_code": "is_valid_code(short_code: str) -> bool"
+  },
+  "analytics": {
+    "record_click": "record_click(short_code: str, ip: str | null, user_agent: str | null) -> None",
+    "get_stats": "get_stats(short_code: str) -> dict"
+  },
+  "api": {
+    "shorten_url": "shorten_url(request: ShortenRequest) -> ShortenResponse",
+    "redirect_url": "redirect_url(short_code: str, request: Request) -> RedirectResponse",
+    "delete_url": "delete_url(short_code: str) -> None"
+  },
+  "cli": {
+    "main": "main() -> int"
+  }
+}

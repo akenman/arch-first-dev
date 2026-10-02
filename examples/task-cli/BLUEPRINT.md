@@ -1,5 +1,10 @@
 # 项目蓝图 — Task CLI 命令行任务管理器
 
+@META
+  version: 1.0
+  skill: arch-first-dev
+  created: 2026-05-17
+
 @PROGRESS
   storage        ██████████ [done]
   tasks          ██████████ [done]
@@ -25,7 +30,7 @@
       post: 数据写入磁盘；写入失败时静默（下次 loadTasks 读到旧数据或空）
       error: 无（降级策略）
       side-effect: 覆盖写入 tasks.json
-  状态: [empty]
+  状态: [done]
 
 @MODULE tasks
   职责: 任务实体的增删改查和状态变更
@@ -66,7 +71,7 @@
       error: id ≤ 0 时抛 ValueError
       side-effect: 存储中更新状态
   依赖: storage → loadTasks(), saveTasks()
-  状态: [empty]
+  状态: [done]
 
 @MODULE stats
   职责: 任务完成率统计和逾期检测
@@ -82,7 +87,7 @@
       error: 无
       side-effect: 无
   依赖: tasks → listTasks()
-  状态: [empty]
+  状态: [done]
 
 @MODULE cli
   职责: 命令行参数解析、命令路由和终端格式化输出
@@ -109,7 +114,7 @@
       side-effect: 无
   依赖: tasks → addTask(), listTasks(), getTask(), updateTask(), deleteTask(), markDone(), markInProgress()
         stats → getStats(), getOverdue()
-  状态: [empty]
+  状态: [done]
 
 ---
 
@@ -251,6 +256,45 @@
   理由: 命令行工具的任何错误都应翻译为用户可读的信息，而非 Python traceback
   替代方案考虑过: 每个命令自己处理 → 代码重复，错误信息不一致
   影响: cli 模块作为唯一入口，承担所有错误翻译职责
+
+---
+
+## 变更日志
+
+@CHANGE_001
+  阶段: Phase 1
+  触发: 初始蓝图设计
+  原因: 首次创建蓝图
+  修改: 无（初始版本）
+  影响: 无
+
+@CHANGE_002
+  阶段: Phase 2 / tasks
+  触发: 实现 addTask 时发现需要 tags 参数默认值
+  原因: 原蓝图未指定 tags 默认值
+  修改: addTask 的 tags 参数默认值设为空数组 []
+  影响: 无（新增参数，不影响已有接口）
+
+@CHANGE_003
+  阶段: Phase 2 / stats
+  触发: 实现 getStats 时发现需要 filter 参数
+  原因: 统计应支持按条件筛选，而非总是全量
+  修改: getStats 签名从 getStats() → getStats(filter: TaskFilter | null)
+  影响: cli 调用 getStats 时需传入 filter（cli 模块尚未开始，无成本）
+
+@VERIFY
+  添加任务:
+    run: python src/main.py add "买牛奶" --priority high
+    expect-exit: 0
+    expect-not-contains: Traceback
+  列出任务:
+    run: python src/main.py list
+    expect-exit: 0
+    expect-not-contains: Traceback
+  统计:
+    run: python src/main.py stats
+    expect-exit: 0
+    expect-not-contains: Traceback
 
 ## 目录结构（约束 5：模块边界）
 

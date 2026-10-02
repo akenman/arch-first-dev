@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "arch-first-dev/blueprint@1",
+  "title": "arch-first-dev 结构化蓝图",
+  "description": "Markdown 蓝图的机器消费格式。Markdown 是人读视图，本 JSON 是机器契约；奖励函数与工具链应迁移到本格式（防正则解析的 reward-hacking 面）。",
+  "type": "object",
+  "required": ["schema", "modules", "flows", "build_order"],
+  "properties": {
+    "schema": {"const": "arch-first-dev/blueprint@1"},
+    "meta": {
+      "type": "object",
+      "properties": {
+        "version": {"type": ["string", "null"]},
+        "source": {"type": "string"},
+        "scope": {"type": "string", "enum": ["full", "partial"]}
+      }
+    },
+    "progress": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "status", "interfaces"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[A-Za-z_]\\w*$"},
+          "description": {"type": "string"},
+          "status": {"enum": ["empty", "in progress", "done", "deferred", "wontfix", "removed"]},
+          "deps": {"type": "array", "items": {"type": "string"}},
+          "interfaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "behaviors"],
+              "properties": {
+                "name": {"type": "string", "pattern": "^[A-Za-z_]\\w*$"},
+                "params": {"type": "string"},
+                "returns": {"type": "string"},
+                "behaviors": {
+                  "type": "object",
+                  "properties": {
+                    "pre": {"type": "string"},
+                    "post": {"type": "string"},
+                    "error": {"type": "string"},
+                    "side-effect": {"type": "string"}
+                  },
+                  "minProperties": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "flows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string"},
+          "involves": {"type": "array", "items": {"type": "string"}},
+          "steps": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "build_order": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 1}
+    },
+    "externals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string"},
+          "type": {"type": ["string", "null"]},
+          "fault_mode": {"type": "boolean"},
+          "contract_file": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string"},
+          "fields": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2}}
+        }
+      }
+    },
+    "verify": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string"},
+          "run": {"type": ["string", "null"]},
+          "expect_exit": {"type": ["integer", "string"]},
+          "contains": {"type": "array", "items": {"type": "string"}},
+          "not_contains": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

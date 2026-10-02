@@ -1,0 +1,19 @@
+{
+  "id": "crud-link-005",
+  "pattern": "crud-cli",
+  "seed": 42005,
+  "entity": "link",
+  "fields": [
+    "url:str",
+    "tags:str",
+    "note:str|null"
+  ],
+  "commands": [
+    "add",
+    "list",
+    "remove"
+  ],
+  "aggregate": "tag_cloud",
+  "held_out": false,
+  "task_prompt": "根据 .arch/BLUEPRINT.md 的契约，实现 收藏链接管理 CLI：在项目根创建 src/ 代码与 src/main.py 入口，使命令 python src/main.py add/list/remove 全部可用，并通过 validate_blueprint.py 的全部检查。"
+}

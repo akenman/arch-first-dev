@@ -1,0 +1,19 @@
+{
+  "id": "crud-todo-000",
+  "pattern": "crud-cli",
+  "seed": 42000,
+  "entity": "todo",
+  "fields": [
+    "title:str",
+    "priority:str",
+    "due:str|null"
+  ],
+  "commands": [
+    "add",
+    "list",
+    "done"
+  ],
+  "aggregate": "progress",
+  "held_out": true,
+  "task_prompt": "根据 .arch/BLUEPRINT.md 的契约，实现 待办事项管理 CLI：在项目根创建 src/ 代码与 src/main.py 入口，使命令 python src/main.py add/list/done 全部可用，并通过 validate_blueprint.py 的全部检查。"
+}

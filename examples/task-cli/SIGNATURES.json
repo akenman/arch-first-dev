@@ -1,0 +1,31 @@
+{
+  "_meta": {
+    "tool": "scripts/validate_blueprint.py",
+    "blueprint": "BLUEPRINT.md",
+    "generated": "2026-09-16 13:13:37 UTC"
+  },
+  "_contracts": {},
+  "storage": {
+    "loadTasks": "loadTasks() -> Task[]",
+    "saveTasks": "saveTasks(tasks: Task[]) -> void"
+  },
+  "tasks": {
+    "addTask": "addTask(title, description, priority, dueDate, tags) -> Task",
+    "listTasks": "listTasks(filter: TaskFilter | null) -> Task[]",
+    "getTask": "getTask(id) -> Task | null",
+    "updateTask": "updateTask(id, fields) -> Task | null",
+    "deleteTask": "deleteTask(id) -> void",
+    "markDone": "markDone(id) -> Task | null",
+    "markInProgress": "markInProgress(id) -> Task | null"
+  },
+  "stats": {
+    "getStats": "getStats(filter: TaskFilter | null) -> Stats",
+    "getOverdue": "getOverdue() -> Task[]"
+  },
+  "cli": {
+    "parseArgs": "parseArgs(argv: string[]) -> Command",
+    "formatTask": "formatTask(task: Task) -> string",
+    "formatTaskList": "formatTaskList(tasks: Task[]) -> string",
+    "formatStats": "formatStats(stats: Stats) -> string"
+  }
+}
